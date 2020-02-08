@@ -60,7 +60,7 @@ class UserRepository implements UserContract
      */
     public function findById($id)
     {
-        return $this->user->find($id);
+        return $this->user->findOrFail($id);
     }
 
     /**
@@ -91,13 +91,21 @@ class UserRepository implements UserContract
     public function updateById($id, $data)
     {
         $this->user = $this->findById($id);
-        $this->user->fill([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'email_verified_at' => now(),
-            'password' => Hash::make($data['password']),
-        ]);
-        return $this->user->save();
+        $newData = [];
+        if(isset($data['name'])) {
+            $newData['name'] = $data['name'];
+        }
+        if(isset($data['email'])) {
+            $newData['email'] = $data['email'];
+            $newData['email_verified_at'] = now();
+        }
+        if(isset($data['password'])) {
+            $newData['password'] = Hash::make($data['password']);
+        }
+        if(count($newData) > 0) {
+            $this->user->fill($newData);
+            return $this->user->save();
+        }
     }
 
     /**

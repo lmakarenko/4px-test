@@ -30,12 +30,12 @@ class UpdateUserRequest extends FormRequest
     public function rules()
     {
         return [
-            // если передано в запросе, обязательное поле, длиной до 255 символов
-            'name' => 'sometimes|required|max:255',
-            // если передано в запросе, обязательное поле, уникальное в таблице users по плю email кроме текущего значения
-            'email' => 'sometimes|required|email|unique:users,email,' . $this->user,
-            // если передано в запросе, обязательное поле, размером [8 .. 255] символов
-            'password' => 'sometimes|required|min:8|max:255',
+            // если передано в запросе, длиной до 255 символов
+            'name' => 'nullable|sometimes|max:255',
+            // если передано в запросе, уникальное в таблице users по полю email кроме текущего значения
+            'email' => 'nullable|sometimes|email|unique:users,email,' . $this->user,
+            // если передано в запросе, размером [8 .. 255] символов
+            'password' => 'nullable|sometimes|min:8|max:255',
         ];
     }
 }

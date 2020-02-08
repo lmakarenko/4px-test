@@ -63,7 +63,7 @@ class SectionRepository implements SectionContract
      */
     public function findById($id)
     {
-        return $this->section->find($id);
+        return $this->section->findOrFail($id);
     }
 
     /**
@@ -75,18 +75,9 @@ class SectionRepository implements SectionContract
      */
     public function store($data)
     {
+        // Сохранение файла логотипа
         if(isset($data['logo'])) {
-            // Проверка наличия обьекта загруженного файла
-            if(!($data['logo'] instanceof UploadedFile)) {
-                throw new \InvalidArgumentException('Section logo file is not instance of ' . UploadedFile::class);
-            }
-            // Перемещение загруженного файла в локальное хранилище
-            $data['logo']->store('/', 'logo');
-            $logoImageHashName = $data['logo']->hashName();
-            $logoFullPath = Storage::disk('logo')->path($logoImageHashName);
-            // Изменение размеров изображения
-            $logoImage = Image::make($logoFullPath)->fit(100);
-            $logoImage->save($logoFullPath);
+            $this->saveLogo($data['logo']);
         }
         // Наполнение модели отделов данными
         $this->section->fill([
@@ -113,25 +104,13 @@ class SectionRepository implements SectionContract
     public function updateById($id, $data)
     {
         $this->section = $this->findById($id);
-        // Проверка наличия обьекта загруженного файла
         $newData = [
             'name' => $data['name'],
             'description' => $data['description'],
         ];
+        // Сохранение файла логотипа
         if(isset($data['logo'])) {
-            if(!($data['logo'] instanceof UploadedFile)) {
-                throw new \InvalidArgumentException('Section logo file is not instance of ' . UploadedFile::class);
-            }
-            // Перемещение загруженного файла в локальное хранилище
-            $data['logo']->store('/', 'logo');
-            $logoImageHashName = $data['logo']->hashName();
-            $logoFullPath = Storage::disk('logo')->path($logoImageHashName);
-            // Изменение размеров изображения
-            $logoImage = Image::make($logoFullPath)->fit(100);
-            $logoImage->save($logoFullPath);
-            // Удаление старого изображения из локального хранилища
-            Storage::disk('logo')->delete($this->section->logo);
-            $newData['logo'] = $logoImageHashName;
+            $newData['logo'] = $this->saveLogo($data['logo'], true);
         }
         // Наполнение модели отделов данными
         $this->section->fill($newData);
@@ -141,6 +120,29 @@ class SectionRepository implements SectionContract
             $this->section->users()->sync($data['users']);
         }
         return $this->section->id;
+    }
+
+    /**
+     * Сохранение загруженного логотипа в локальное хранилище, возвращает имя сохраненного файла
+     *
+     * @param UploadedFile $uploadedFile
+     * @param bool $deleteOld
+     * @return string
+     */
+    protected function saveLogo(UploadedFile $uploadedFile, $deleteOld = false)
+    {
+        // Перемещение загруженного файла в локальное хранилище
+        $uploadedFile->store('/', 'logo');
+        $logoImageHashName = $uploadedFile->hashName();
+        $logoFullPath = Storage::disk('logo')->path($logoImageHashName);
+        // Изменение размеров изображения
+        $logoImage = Image::make($logoFullPath)->fit(100);
+        $logoImage->save($logoFullPath);
+        // Удаление старого изображения из локального хранилища
+        if($deleteOld) {
+            Storage::disk('logo')->delete($this->section->logo);
+        }
+        return $logoImageHashName;
     }
 
     /**
