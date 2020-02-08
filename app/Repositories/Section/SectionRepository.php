@@ -75,16 +75,16 @@ class SectionRepository implements SectionContract
      */
     public function store($data)
     {
+        $newData = [
+            'name' => $data['name'],
+            'description' => $data['description']
+        ];
         // Сохранение файла логотипа
         if(isset($data['logo'])) {
-            $this->saveLogo($data['logo']);
+            $newData['logo'] = $this->saveLogo($data['logo']);
         }
         // Наполнение модели отделов данными
-        $this->section->fill([
-            'name' => $data['name'],
-            'description' => $data['description'],
-            'logo' => $logoImageHashName ?? '',
-        ]);
+        $this->section->fill($newData);
         // Сохранение модели в БД
         if($this->section->save() && isset($data['users'])) {
             // Добавление связей отдела с пользователями в pivot-таблицу

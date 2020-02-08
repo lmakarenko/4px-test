@@ -34,7 +34,7 @@
                 @foreach ($sections as $section)
                     <tr>
                         <th scope="row">{{ $section->id }}</th>
-                        <td><img src="{{ asset("/public/logo/{$section->logo}") }}" class="mw-100" /></td>
+                        <td>@if($section->logo)<img src="{{ asset("/public/logo/{$section->logo}") }}" class="mw-100" />@endif</td>
                         <td>
                             <div>{{ $section->name }}</div>
                             <div>{{ $section->description }}</div>
