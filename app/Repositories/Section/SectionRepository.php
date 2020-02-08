@@ -114,6 +114,10 @@ class SectionRepository implements SectionContract
     {
         $this->section = $this->findById($id);
         // Проверка наличия обьекта загруженного файла
+        $newData = [
+            'name' => $data['name'],
+            'description' => $data['description'],
+        ];
         if(isset($data['logo'])) {
             if(!($data['logo'] instanceof UploadedFile)) {
                 throw new \InvalidArgumentException('Section logo file is not instance of ' . UploadedFile::class);
@@ -127,13 +131,10 @@ class SectionRepository implements SectionContract
             $logoImage->save($logoFullPath);
             // Удаление старого изображения из локального хранилища
             Storage::disk('logo')->delete($this->section->logo);
+            $newData['logo'] = $logoImageHashName;
         }
         // Наполнение модели отделов данными
-        $this->section->fill([
-            'name' => $data['name'],
-            'description' => $data['description'],
-            'logo' => $logoImageHashName ?? '',
-        ]);
+        $this->section->fill($newData);
         // Сохранение модели в БД
         if($this->section->save() && isset($data['users'])) {
             // Синхронизация связей отдела с пользователями в pivot-таблице, удаление старых связей для данного отдела
