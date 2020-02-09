@@ -8,10 +8,12 @@ use App\Section;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
+use Illuminate\Support\Facades\DB;
+use App\Services\Loggers\ErrorLoggerContract;
 
 /**
  * Class SectionRepository
- * Реализация репозитория для работы с данными отделов
+ * Реализация репозитория для работы с данными отделов (Eloquent)
  *
  * @package App\Repositories\Section
  */
@@ -25,13 +27,21 @@ class SectionRepository implements SectionContract
     protected $section;
 
     /**
+     * Логгер ошибок
+     *
+     * @var ErrorLoggerContract
+     */
+    protected $errorLogger;
+
+    /**
      * SectionRepository constructor.
      * Внедрение зависимости от модели отделов
      *
      * @param Section $section
      */
-    function __construct(Section $section) {
+    public function __construct(Section $section, ErrorLoggerContract $errorLogger) {
         $this->section = $section;
+        $this->errorLogger = $errorLogger;
     }
 
     /**
@@ -80,23 +90,27 @@ class SectionRepository implements SectionContract
             'description' => $data['description']
         ];
         try {
-            \DB::transaction(function() use ($data, $newData) {
-                // Сохранение файла логотипа
-                if(isset($data['logo'])) {
-                    $newData['logo'] = $this->saveLogo($data['logo']);
-                }
-                // Наполнение модели отделов данными
-                $this->section->fill($newData);
-                // Сохранение модели в БД
-                if($this->section->save() && isset($data['users'])) {
-                    // Добавление связей отдела с пользователями в pivot-таблицу
-                    $this->section->users()->attach($data['users']);
-                }
-                \DB::commit();
-            });
+            // Сохранение файла логотипа
+            if(isset($data['logo'])) {
+                $newData['logo'] = $this->saveLogo($data['logo']);
+            }
+            // Ручное управление транзакцией
+            DB::beginTransaction();
+            // Наполнение модели отделов данными
+            $this->section->fill($newData);
+            // Сохранение модели в БД
+            if(!$this->section->save()) {
+                throw new \Exception('model save failed');
+            }
+            if(isset($data['users'])) {
+                // Добавление связей отдела с пользователями в pivot-таблицу
+                $this->section->users()->attach($data['users']);
+            }
+            DB::commit();
             return $this->section->id;
         } catch(\Exception $ex) {
-            \DB::rollback();
+            DB::rollback();
+            $this->errorLogger->errorByException('Section create error!', $ex);
         }
         return false;
     }
@@ -117,23 +131,27 @@ class SectionRepository implements SectionContract
             'description' => $data['description'],
         ];
         try {
-            \DB::transaction(function() use ($data, $newData) {
-                // Сохранение файла логотипа
-                if(isset($data['logo'])) {
-                    $newData['logo'] = $this->saveLogo($data['logo'], true);
-                }
-                // Наполнение модели отделов данными
-                $this->section->fill($newData);
-                // Сохранение модели в БД
-                if($this->section->save() && isset($data['users'])) {
-                    // Синхронизация связей отдела с пользователями в pivot-таблице, удаление старых связей для данного отдела
-                    $this->section->users()->sync($data['users']);
-                }
-            });
-            \DB::commit();
+            // Сохранение файла логотипа
+            if(isset($data['logo'])) {
+                $newData['logo'] = $this->saveLogo($data['logo'], true);
+            }
+            // Ручное управление транзакцией
+            DB::beginTransaction();
+            // Наполнение модели отделов данными
+            $this->section->fill($newData);
+            // Сохранение модели в БД
+            if(!$this->section->save()) {
+                throw new \Exception('model save failed');
+            }
+            if(isset($data['users'])) {
+                // Синхронизация связей отдела с пользователями в pivot-таблице, удаление старых связей для данного отдела
+                $this->section->users()->sync($data['users']);
+            }
+            DB::commit();
             return true;
         } catch(\Exception $ex) {
-            \DB::rollback();
+            DB::rollback();
+            $this->errorLogger->errorByException('Section update error!', $ex);
         }
         return false;
     }
@@ -147,6 +165,7 @@ class SectionRepository implements SectionContract
      */
     protected function saveLogo(UploadedFile $uploadedFile, $deleteOld = false)
     {
+        // TODO: вынести логику в отдельный компонент (напр. менеджер логотипов) и связать через интерфейс с репозиторием
         // Перемещение загруженного файла в локальное хранилище
         $uploadedFile->store('/', 'logo');
         $logoImageHashName = $uploadedFile->hashName();
@@ -165,12 +184,20 @@ class SectionRepository implements SectionContract
      * Удаляет раздел из БД по id
      *
      * @param $id
-     * @return int
+     * @return bool
      */
     public function destroyById($id)
     {
-        $this->section = $this->findById($id);
-        Storage::disk('logo')->delete($this->section->logo);
-        return $this->section->destroy($id);
+        try {
+            $this->section = $this->findById($id);
+            Storage::disk('logo')->delete($this->section->logo);
+            if(0 == $this->section->destroy($id)) {
+                throw new \Exception('0 rows deleted');
+            }
+            return true;
+        } catch(\Exception $ex) {
+            $this->errorLogger->errorByException('Section delete error!', $ex);
+        }
+        return false;
     }
 }

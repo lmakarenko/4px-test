@@ -99,6 +99,13 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
+
+        // Отдельный канал для логирования ошибок приложения
+        'app-errors' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/app-errors.log'),
+            'level' => 'error',
+        ],
     ],
 
 ];

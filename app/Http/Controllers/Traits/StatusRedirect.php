@@ -41,6 +41,13 @@ trait StatusRedirect
         return redirect()->route($this->getRouteName($route))->with('success', $msg);
     }
 
+    /**
+     * Редирект на указанный маршрут в случае ошибки
+     *
+     * @param $msg
+     * @param null $route
+     * @return \Illuminate\Http\RedirectResponse
+     */
     protected function redirectFailure($msg, $route = null)
     {
         return redirect()->route($this->getRouteName($route))->with('error', $msg);
