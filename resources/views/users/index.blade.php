@@ -14,11 +14,7 @@
         </div>
         <div class="card-body">
             <div class="col-sm-12">
-                @if(session()->get('success'))
-                    <div class="alert alert-success">
-                        {{ session()->get('success') }}
-                    </div>
-                @endif
+                @include('includes.status')
             </div>
             <table class="table">
                 <thead>

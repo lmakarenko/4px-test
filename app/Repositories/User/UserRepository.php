@@ -106,6 +106,7 @@ class UserRepository implements UserContract
             $this->user->fill($newData);
             return $this->user->save();
         }
+         return false;
     }
 
     /**
@@ -117,6 +118,6 @@ class UserRepository implements UserContract
     public function destroyById($id)
     {
         $this->user = $this->findById($id);
-        return $this->user->destroy();
+        return $this->user->destroy($id);
     }
 }

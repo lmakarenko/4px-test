@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Traits\StatusRedirect;
 use App\Repositories\User\UserContract,
     App\Http\Requests\StoreUserRequest,
     App\Http\Requests\UpdateUserRequest;
@@ -14,6 +15,7 @@ use App\Repositories\User\UserContract,
  */
 class UserController extends Controller
 {
+    use StatusRedirect;
     /**
      * Репозиторий пользователей
      *
@@ -30,6 +32,7 @@ class UserController extends Controller
     public function __construct(UserContract $repo)
     {
         $this->repo = $repo;
+        $this->indexRoute = 'users.index';
     }
 
     /**
@@ -62,8 +65,11 @@ class UserController extends Controller
     public function store(StoreUserRequest $request)
     {
         $validated = $request->validated();
-        $this->repo->store($validated);
-        return redirect()->route('users.index')->with('success', 'User created!');
+        if($this->repo->store($validated)) {
+            return $this->redirectSuccess('User created!');
+        } else {
+            return $this->redirectFailure('User create error!');
+        }
     }
 
     /**
@@ -88,8 +94,11 @@ class UserController extends Controller
     public function update($id, UpdateUserRequest $request)
     {
         $validated = $request->validated();
-        $this->repo->updateById($id, $validated);
-        return redirect()->route('users.index')->with('success', 'User updated!');
+        if($this->repo->updateById($id, $validated)) {
+            return $this->redirectSuccess('User updated!');
+        } else {
+            return $this->redirectFailure('User update error!');
+        }
     }
 
     /**
@@ -100,7 +109,10 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        $this->repo->destroyById($id);
-        return redirect()->route('users.index')->with('success', 'User deleted!');
+        if($this->repo->destroyById($id)) {
+            return $this->redirectSuccess('User deleted!');
+        } else {
+            return $this->redirectFailure('User delete error!');
+        }
     }
 }

@@ -6,17 +6,20 @@ use App\Repositories\User\UserContract;
 use App\Repositories\Section\SectionContract;
 use App\Http\Requests\StoreSectionRequest;
 use App\Http\Requests\UpdateSectionRequest;
+use App\Http\Controllers\Traits\StatusRedirect;
 
 /**
  * Class SectionController
- * Контроллер для обработки запросов при работе с разделами
+ * Контроллер для обработки запросов при работе с отделами
  *
  * @package App\Http\Controllers
  */
 class SectionController extends Controller
 {
+    use StatusRedirect;
+
     /**
-     * Репозиторий разделов
+     * Репозиторий отделов
      *
      * @var SectionContract
      */
@@ -31,7 +34,7 @@ class SectionController extends Controller
 
     /**
      * SectionController constructor.
-     * Внедрение зависимостей от репозиториев пользователей и разделов по их интерфейсам
+     * Внедрение зависимостей от репозиториев пользователей и отделов по их интерфейсам
      *
      * @param SectionContract $sectionRepo
      * @param UserContract $userRepo
@@ -40,10 +43,11 @@ class SectionController extends Controller
     {
         $this->sectionRepo = $sectionRepo;
         $this->userRepo = $userRepo;
+        $this->indexRoute = 'sections.index';
     }
 
     /**
-     * Показывает страницу листинга разделов с пагинацией
+     * Показывает страницу листинга отделов с пагинацией
      *
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
@@ -54,7 +58,7 @@ class SectionController extends Controller
     }
 
     /**
-     * Показ формы создания раздела
+     * Показ формы создания отдела
      *
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
@@ -65,7 +69,7 @@ class SectionController extends Controller
     }
 
     /**
-     * Сохранение данных нового раздела
+     * Сохранение данных нового отдела
      *
      * @param StoreSectionRequest $request
      * @return \Illuminate\Http\RedirectResponse
@@ -73,12 +77,15 @@ class SectionController extends Controller
     public function store(StoreSectionRequest $request)
     {
         $validated = $request->validated();
-        $this->sectionRepo->store($validated);
-        return redirect()->route('sections.index')->with('success', 'Section created!');
+        if($this->sectionRepo->store($validated)) {
+            return $this->redirectSuccess('Section created!');
+        } else {
+            return $this->redirectFailure('Section create error!');
+        }
     }
 
     /**
-     * Показ формы редактирования раздела по id
+     * Показ формы редактирования отдела по id
      *
      * @param $id
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
@@ -91,7 +98,7 @@ class SectionController extends Controller
     }
 
     /**
-     * Обновление данных раздела по id
+     * Обновление данных отдела по id
      *
      * @param $id
      * @param UpdateSectionRequest $request
@@ -100,19 +107,26 @@ class SectionController extends Controller
     public function update($id, UpdateSectionRequest $request)
     {
         $validated = $request->validated();
-        $this->sectionRepo->updateById($id, $validated);
-        return redirect()->route('sections.index')->with('success', 'Section updated!');
+        if($this->sectionRepo->updateById($id, $validated)) {
+            return $this->redirectSuccess('Section updated!');
+        } else {
+            return $this->redirectFailure('Section update error!');
+        }
     }
 
     /**
-     * Удаление раздела по id
+     * Удаление отдела по id
      *
      * @param $id
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($id)
     {
-        $this->sectionRepo->destroyById($id);
-        return redirect()->route('sections.index')->with('success', 'Section deleted!');
+        if($this->sectionRepo->destroyById($id)) {
+            return $this->redirectSuccess('Section deleted!');
+        } else {
+            return $this->redirectFailure('Section delete error!');
+        }
     }
+
 }

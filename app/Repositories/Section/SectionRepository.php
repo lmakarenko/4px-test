@@ -71,7 +71,7 @@ class SectionRepository implements SectionContract
      * если загружен файл логотипа отдела - сохраняет его в локальное хранилище
      *
      * @param $data
-     * @return mixed
+     * @return bool|mixed
      */
     public function store($data)
     {
@@ -79,18 +79,26 @@ class SectionRepository implements SectionContract
             'name' => $data['name'],
             'description' => $data['description']
         ];
-        // Сохранение файла логотипа
-        if(isset($data['logo'])) {
-            $newData['logo'] = $this->saveLogo($data['logo']);
+        try {
+            \DB::transaction(function() use ($data, $newData) {
+                // Сохранение файла логотипа
+                if(isset($data['logo'])) {
+                    $newData['logo'] = $this->saveLogo($data['logo']);
+                }
+                // Наполнение модели отделов данными
+                $this->section->fill($newData);
+                // Сохранение модели в БД
+                if($this->section->save() && isset($data['users'])) {
+                    // Добавление связей отдела с пользователями в pivot-таблицу
+                    $this->section->users()->attach($data['users']);
+                }
+                \DB::commit();
+            });
+            return $this->section->id;
+        } catch(\Exception $ex) {
+            \DB::rollback();
         }
-        // Наполнение модели отделов данными
-        $this->section->fill($newData);
-        // Сохранение модели в БД
-        if($this->section->save() && isset($data['users'])) {
-            // Добавление связей отдела с пользователями в pivot-таблицу
-            $this->section->users()->attach($data['users']);
-        }
-        return $this->section->id;
+        return false;
     }
 
     /**
@@ -108,18 +116,26 @@ class SectionRepository implements SectionContract
             'name' => $data['name'],
             'description' => $data['description'],
         ];
-        // Сохранение файла логотипа
-        if(isset($data['logo'])) {
-            $newData['logo'] = $this->saveLogo($data['logo'], true);
+        try {
+            \DB::transaction(function() use ($data, $newData) {
+                // Сохранение файла логотипа
+                if(isset($data['logo'])) {
+                    $newData['logo'] = $this->saveLogo($data['logo'], true);
+                }
+                // Наполнение модели отделов данными
+                $this->section->fill($newData);
+                // Сохранение модели в БД
+                if($this->section->save() && isset($data['users'])) {
+                    // Синхронизация связей отдела с пользователями в pivot-таблице, удаление старых связей для данного отдела
+                    $this->section->users()->sync($data['users']);
+                }
+            });
+            \DB::commit();
+            return true;
+        } catch(\Exception $ex) {
+            \DB::rollback();
         }
-        // Наполнение модели отделов данными
-        $this->section->fill($newData);
-        // Сохранение модели в БД
-        if($this->section->save() && isset($data['users'])) {
-            // Синхронизация связей отдела с пользователями в pivot-таблице, удаление старых связей для данного отдела
-            $this->section->users()->sync($data['users']);
-        }
-        return $this->section->id;
+        return false;
     }
 
     /**
