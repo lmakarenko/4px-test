@@ -1,7 +1,6 @@
 <?php
 
-
-namespace App\Services\Loggers;
+namespace App\Services\Loggers\ErrorLogger;
 
 /**
  * Interface ErrorLoggerContract

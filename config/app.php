@@ -179,7 +179,8 @@ return [
          * Custom Service Providers
          */
         App\Providers\RepositoryServiceProvider::class,
-        App\Providers\SimpleLoggerServiceProvider::class,
+        App\Providers\ErrorLoggerServiceProvider::class,
+        App\Providers\LogoManagerServiceProvider::class,
 
     ],
 

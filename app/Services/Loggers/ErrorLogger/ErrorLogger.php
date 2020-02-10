@@ -1,18 +1,16 @@
 <?php
 
+namespace App\Services\Loggers\ErrorLogger;
 
-namespace App\Services\Loggers\SimpleLogger;
-
-use App\Services\Loggers\ErrorLoggerContract;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Class SimpleLogger
+ * Class ErrorLogger
  *  Простая реализация логгера ошибок, используя встроенный логгер фреймворка
  *
- * @package App\Services\Loggers\SimpleLogger
+ * @package App\Services\Loggers\ErrorLogger
  */
-class SimpleLogger implements ErrorLoggerContract
+class ErrorLogger implements ErrorLoggerContract
 {
     /**
      * Имя канала для логирования (config/logging.php)

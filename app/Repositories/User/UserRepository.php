@@ -5,7 +5,7 @@ namespace App\Repositories\User;
 use App\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use App\Services\Loggers\ErrorLoggerContract;
+use App\Services\Loggers\ErrorLogger\ErrorLoggerContract;
 
 /**
  * Class UserRepository
@@ -31,7 +31,7 @@ class UserRepository implements UserContract
 
     /**
      * UserRepository constructor.
-     * Внедрение зависимости от модели пользователей
+     * Внедрение зависимостей от: модели пользователей, логгера ошибок
      *
      * @param User $user
      */

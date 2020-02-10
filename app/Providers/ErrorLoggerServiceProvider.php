@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
-class SimpleLoggerServiceProvider extends ServiceProvider
+class ErrorLoggerServiceProvider extends ServiceProvider
 {
     /**
      * Register services.
@@ -13,7 +13,10 @@ class SimpleLoggerServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->bind('App\Services\Loggers\ErrorLoggerContract', 'App\Services\Loggers\SimpleLogger\SimpleLogger');
+        $this->app->singleton(
+            'App\Services\Loggers\ErrorLogger\ErrorLoggerContract',
+            'App\Services\Loggers\ErrorLogger\ErrorLogger'
+        );
     }
 
     /**

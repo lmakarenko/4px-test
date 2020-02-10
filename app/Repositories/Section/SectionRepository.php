@@ -5,11 +5,9 @@ namespace App\Repositories\Section;
 
 
 use App\Section;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\DB;
-use App\Services\Loggers\ErrorLoggerContract;
+use App\Services\Loggers\ErrorLogger\ErrorLoggerContract;
+use App\Services\LogoManager\LogoManagerContract;
 
 /**
  * Class SectionRepository
@@ -34,14 +32,24 @@ class SectionRepository implements SectionContract
     protected $errorLogger;
 
     /**
+     * Менеджер логотипов
+     *
+     * @var LogoManagerContract
+     */
+    protected $logoManager;
+
+    /**
      * SectionRepository constructor.
-     * Внедрение зависимости от модели отделов
+     * Внедрение зависимостей от: модель отделов, логгер ошибок, менеджер логотипов
      *
      * @param Section $section
+     * @param ErrorLoggerContract $errorLogger
+     * @param LogoManagerContract $logoManager
      */
-    public function __construct(Section $section, ErrorLoggerContract $errorLogger) {
+    public function __construct(Section $section, ErrorLoggerContract $errorLogger, LogoManagerContract $logoManager) {
         $this->section = $section;
         $this->errorLogger = $errorLogger;
+        $this->logoManager = $logoManager;
     }
 
     /**
@@ -92,7 +100,7 @@ class SectionRepository implements SectionContract
         try {
             // Сохранение файла логотипа
             if(isset($data['logo'])) {
-                $newData['logo'] = $this->saveLogo($data['logo']);
+                $newData['logo'] = $this->logoManager->store($data['logo']);
             }
             // Ручное управление транзакцией
             DB::beginTransaction();
@@ -125,15 +133,20 @@ class SectionRepository implements SectionContract
      */
     public function updateById($id, $data)
     {
-        $this->section = $this->findById($id);
-        $newData = [
-            'name' => $data['name'],
-            'description' => $data['description'],
-        ];
         try {
+            $this->section = $this->findById($id);
+            $newData = [
+                'name' => $data['name'],
+                'description' => $data['description'],
+            ];
             // Сохранение файла логотипа
             if(isset($data['logo'])) {
-                $newData['logo'] = $this->saveLogo($data['logo'], true);
+                // Сохранение нового логотипа в файловое хранилище
+                $newData['logo'] = $this->logoManager->store($data['logo']);
+                // Удаление предыдущего логотипа
+                if('' !== $this->section->logo) {
+                    $this->logoManager->delete($this->section->logo);
+                }
             }
             // Ручное управление транзакцией
             DB::beginTransaction();
@@ -157,30 +170,6 @@ class SectionRepository implements SectionContract
     }
 
     /**
-     * Сохранение загруженного логотипа в локальное хранилище, возвращает имя сохраненного файла
-     *
-     * @param UploadedFile $uploadedFile
-     * @param bool $deleteOld
-     * @return string
-     */
-    protected function saveLogo(UploadedFile $uploadedFile, $deleteOld = false)
-    {
-        // TODO: вынести логику в отдельный компонент (напр. менеджер логотипов) и связать через интерфейс с репозиторием
-        // Перемещение загруженного файла в локальное хранилище
-        $uploadedFile->store('/', 'logo');
-        $logoImageHashName = $uploadedFile->hashName();
-        $logoFullPath = Storage::disk('logo')->path($logoImageHashName);
-        // Изменение размеров изображения
-        $logoImage = Image::make($logoFullPath)->fit(100);
-        $logoImage->save($logoFullPath);
-        // Удаление старого изображения из локального хранилища
-        if($deleteOld) {
-            Storage::disk('logo')->delete($this->section->logo);
-        }
-        return $logoImageHashName;
-    }
-
-    /**
      * Удаляет раздел из БД по id
      *
      * @param $id
@@ -190,7 +179,9 @@ class SectionRepository implements SectionContract
     {
         try {
             $this->section = $this->findById($id);
-            Storage::disk('logo')->delete($this->section->logo);
+            if('' !== $this->section->logo) {
+                $this->logoManager->delete($this->section->logo);
+            }
             if(0 == $this->section->destroy($id)) {
                 throw new \Exception('0 rows deleted');
             }
