@@ -65,7 +65,7 @@ class LogoManager implements LogoManagerContract
             } else {
                 throw new InvalidArgumentException('file argument has invalid type');
             }
-            if(empty($logoImageHashName)) {
+            if('' == $logoImageHashName) {
                 throw new Exception('hash file is empty');
             }
             $logoFullPath = $this->fileStorage->path($logoImageHashName);
@@ -85,7 +85,6 @@ class LogoManager implements LogoManagerContract
     public function delete($file)
     {
         // Удаление старого изображения из локального хранилища
-        //Storage::disk('logo')->delete($this->section->logo);
         try {
             if(!$this->fileStorage->delete($file)) {
                 throw new Exception('delete file error');
